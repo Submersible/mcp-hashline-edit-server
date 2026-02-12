@@ -1,0 +1,23 @@
+{
+  "name": "mcp-hashline-edit-server",
+  "version": "0.1.0",
+  "description": "MCP server providing hashline-based file editing tools — line-addressed edits using content hashes for integrity verification",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "mcp-hashline-edit-server": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "diff": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/diff": "^7.0.2",
+    "typescript": "^5.9.3"
+  }
+}

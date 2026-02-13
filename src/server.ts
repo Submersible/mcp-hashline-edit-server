@@ -40,8 +40,9 @@ export function createServer(): McpServer {
 			path: z.string().describe("Path to the file to read (relative or absolute)"),
 			offset: z.number().optional().describe("Line number to start reading from (1-indexed)"),
 			limit: z.number().optional().describe("Maximum number of lines to read"),
+			plain: z.boolean().optional().describe("If true, return plain numbered lines without hashes (for reading, not editing)"),
 		},
-		async ({ path: filePath, offset, limit }) => {
+		async ({ path: filePath, offset, limit, plain }) => {
 			const absolutePath = resolvePath(filePath);
 
 			try {
@@ -52,7 +53,9 @@ export function createServer(): McpServer {
 				const endLine = Math.min(lines.length, startLine - 1 + maxLines);
 				const selectedLines = lines.slice(startLine - 1, endLine);
 				const selectedContent = selectedLines.join("\n");
-				const formatted = formatHashLines(selectedContent, startLine);
+				const formatted = plain
+					? selectedLines.map((line, i) => `${startLine + i}|${line}`).join("\n")
+					: formatHashLines(selectedContent, startLine);
 
 				const totalLines = lines.length;
 				let header = `File: ${filePath} (${totalLines} lines)`;
@@ -63,7 +66,7 @@ export function createServer(): McpServer {
 					header += ` (${totalLines - endLine} more lines below)`;
 				}
 
-				return { content: [{ type: "text", text: `${header}\n\n${formatted}` }] };
+				return { content: [{ type: "text", text: `${header}\n\n\`\`\`\n${formatted}\n\`\`\`` }] };
 			} catch (err) {
 				try {
 					const stat = await fs.stat(absolutePath);
@@ -72,7 +75,7 @@ export function createServer(): McpServer {
 						const listing = entries
 							.map((e) => `${e.isDirectory() ? "d" : "f"} ${e.name}`)
 							.join("\n");
-						return { content: [{ type: "text", text: `Directory: ${filePath}\n\n${listing}` }] };
+						return { content: [{ type: "text", text: `Directory: ${filePath}\n\n\`\`\`\n${listing}\n\`\`\`` }] };
 					}
 				} catch {
 					// Not a directory either
@@ -186,7 +189,7 @@ export function createServer(): McpServer {
 					resultText += `\n\nWarnings:\n${anchorResult.warnings.join("\n")}`;
 				}
 				if (diffResult.diff) {
-					resultText += `\n\nDiff:\n${diffResult.diff}`;
+					resultText += `\n\nDiff:\n\`\`\`diff\n${diffResult.diff}\n\`\`\``;
 				}
 
 				return { content: [{ type: "text", text: resultText }] };
@@ -238,7 +241,7 @@ export function createServer(): McpServer {
 			limit: z.number().optional().describe("Limit output to first N matches (default: 100)"),
 		},
 		async ({ pattern, path: searchPath, glob: globPattern, type: fileType, i: caseInsensitive, pre, post, limit }) => {
-			const args = ["rg", "--line-number", "--no-heading"];
+			const args = ["rg", "--line-number", "--no-heading", "--with-filename"];
 
 			if (caseInsensitive) args.push("-i");
 			if (pre) args.push("-B", String(pre));
@@ -300,7 +303,7 @@ export function createServer(): McpServer {
 					formatted.push(line);
 				}
 
-				return { content: [{ type: "text", text: formatted.join("\n") }] };
+				return { content: [{ type: "text", text: `\`\`\`\n${formatted.join("\n")}\n\`\`\`` }] };
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				return { content: [{ type: "text", text: `grep error: ${message}` }], isError: true };

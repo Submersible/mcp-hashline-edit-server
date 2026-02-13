@@ -7,9 +7,8 @@ describe("grep", () => {
 	beforeAll(async () => { ctx = await setupContext(); });
 	afterAll(async () => { await teardownContext(ctx); });
 
-	// rg omits filename when searching a single file, so hashline formatting
-	// only triggers for directory searches. Tests that check the `:>>` format
-	// use a directory with a single file inside.
+	// rg omits filename when searching a single file unless --with-filename
+	// is passed. Our grep tool must always produce hashline-formatted output.
 
 	async function writeInDir(name: string, fileName: string, content: string): Promise<string> {
 		const dir = tmpPath(ctx, name);
@@ -134,5 +133,25 @@ describe("grep", () => {
 		expect(readLine).toBeDefined();
 		expect(grepHash).toBe(readLine!.hash);
 		expect(grepLine).toBe(readLine!.line);
+	});
+
+	test("single-file grep produces hashline-formatted output", async () => {
+		const p = await writeTmpFile(ctx, "grep-single.txt", "aaa\nbbb\nccc");
+		const result = await callTool(ctx, "grep", { pattern: "bbb", path: p });
+		const text = getText(result);
+		// Should have hash format even for single-file search
+		expect(text).toMatch(/>>(\d+):([0-9a-f]{2})\|bbb/);
+	});
+
+	test("single-file grep hashes match read_file hashes", async () => {
+		const p = await writeTmpFile(ctx, "grep-single-hash.txt", "alpha\nbeta\ngamma");
+		const readResult = parseHashlines(getText(await callTool(ctx, "read_file", { path: p })));
+		const grepResult = await callTool(ctx, "grep", { pattern: "beta", path: p });
+		const grepText = getText(grepResult);
+		const grepMatch = grepText.match(/>>(\d+):([0-9a-f]{2})\|beta/);
+		expect(grepMatch).not.toBeNull();
+		const readLine = readResult.find((l) => l.content === "beta");
+		expect(readLine).toBeDefined();
+		expect(grepMatch![2]).toBe(readLine!.hash);
 	});
 });

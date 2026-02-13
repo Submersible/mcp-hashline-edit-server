@@ -2,6 +2,7 @@
  * Diff generation and replace-mode utilities.
  */
 import * as Diff from "diff";
+import { computeLineHash } from "./hashline";
 import { DEFAULT_FUZZY_THRESHOLD, findMatch, type FuzzyMatch } from "./fuzzy";
 import { adjustIndentation, normalizeToLF } from "./normalize";
 
@@ -29,7 +30,8 @@ function countContentLines(content: string): number {
 
 function formatNumberedDiffLine(prefix: "+" | "-" | " ", lineNum: number, width: number, content: string): string {
 	const padded = String(lineNum).padStart(width, " ");
-	return `${prefix}${padded}|${content}`;
+	const hash = computeLineHash(lineNum, content);
+	return `${prefix}${padded}:${hash}|${content}`;
 }
 
 export function generateDiffString(oldContent: string, newContent: string, contextLines = 4): DiffResult {

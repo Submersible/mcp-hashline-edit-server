@@ -99,6 +99,14 @@ The `replace` edit variant uses `replaceText` from `diff.ts` which delegates to 
 
 ## Testing
 
+```bash
+# Run all tests
+bun test
+
+# Run a specific test file
+bun test test/grep.test.ts
+```
+
 Manual testing via MCP protocol over stdio:
 
 ```bash
@@ -117,15 +125,47 @@ printf '...initialize...\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params"
 |---------|-------------|
 | `bun install` | Install dependencies |
 | `bun run src/index.ts` | Start the MCP server |
+| `bun test` | Run test suite |
 | `bunx tsc --noEmit` | Type check |
 
 ## Code Style
 
 - No `any` types unless absolutely necessary
+- No `ReturnType<>` — use actual type names; if no exported name exists, define a type alias
+- No inline/dynamic imports — always use top-level `import` statements
+- `#` private fields over `private`/`protected`/`public` keywords (except constructor parameter properties)
+- `Promise.withResolvers<T>()` over `new Promise((resolve, reject) => ...)`
 - Use Bun APIs where available (`Bun.file()`, `Bun.write()`, `Bun.hash`, `Bun.spawn()`)
 - Use `node:fs/promises` only for directory operations (Bun has no native dir APIs)
 - Namespace imports for node modules: `import * as fs from "node:fs/promises"`
-- No console.log in tool handlers — return errors via MCP `isError: true` responses
+- Never remove or downgrade code to fix type errors — upgrade the dependency instead
+- Always ask before removing functionality or code that appears intentional
+- **No `console.log`/`console.error`/`console.warn`** — stdout is the MCP stdio transport; stray console output corrupts the protocol. Return errors via MCP `isError: true` responses.
+
+### File I/O Anti-Patterns
+
+- Never `.exists()` before reading — use try-catch:
+  ```typescript
+  // BAD: two syscalls, race condition
+  if (await Bun.file(path).exists()) return await Bun.file(path).text();
+
+  // GOOD: one syscall, atomic
+  try { return await Bun.file(path).text(); }
+  catch (err) { if (isEnoent(err)) return null; throw err; }
+  ```
+- Never create multiple `Bun.file()` handles to the same path
+- Never `Buffer.from(await Bun.file(x).arrayBuffer())` — use `fs.readFile()`
+
+### Where Bun Wins
+
+| Operation | Use | Not |
+|-----------|-----|-----|
+| File read/write | `Bun.file()`, `Bun.write()` | `readFileSync`, `writeFileSync` |
+| Spawn process | `` $`cmd` ``, `Bun.spawn()` | `child_process` |
+| Sleep | `Bun.sleep(ms)` | `setTimeout` promise |
+| Binary lookup | `Bun.which("git")` | `spawnSync(["which", "git"])` |
+| Hashing | `Bun.hash()` | `node:crypto` |
+| Path resolution | `import.meta.dir` | `fileURLToPath` |
 
 ## Dependencies
 

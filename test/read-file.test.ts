@@ -116,4 +116,37 @@ describe("read_file", () => {
 		// The header still shows the file info
 		expect(text).toContain("short.txt");
 	});
+
+	test("plain mode returns lines without hashes", async () => {
+		const p = await writeTmpFile(ctx, "plain.txt", "aaa\nbbb\nccc");
+		const result = await callTool(ctx, "read_file", { path: p, plain: true });
+		const text = getText(result);
+		expect(text).toContain("1|aaa");
+		expect(text).toContain("2|bbb");
+		expect(text).toContain("3|ccc");
+		// Should NOT contain hash format (LINE:HASH|)
+		expect(text).not.toMatch(/\d+:[0-9a-f]{2}\|/);
+	});
+
+	test("plain mode with offset and limit", async () => {
+		const content = Array.from({ length: 10 }, (_, i) => `line ${i + 1}`).join("\n");
+		const p = await writeTmpFile(ctx, "plain-offset.txt", content);
+		const result = await callTool(ctx, "read_file", { path: p, offset: 3, limit: 2, plain: true });
+		const text = getText(result);
+		expect(text).toContain("showing lines 3-4");
+		expect(text).toContain("3|line 3");
+		expect(text).toContain("4|line 4");
+		expect(text).not.toMatch(/\d+:[0-9a-f]{2}\|/);
+	});
+
+	test("default mode still returns hashes", async () => {
+		const p = await writeTmpFile(ctx, "default.txt", "hello\nworld");
+		const result = await callTool(ctx, "read_file", { path: p });
+		const text = getText(result);
+		// Should have hash format
+		expect(text).toMatch(/\d+:[0-9a-f]{2}\|/);
+		const lines = parseHashlines(text);
+		expect(lines).toHaveLength(2);
+		expect(lines[0].content).toBe("hello");
+	});
 });

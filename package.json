@@ -1,12 +1,20 @@
 {
   "name": "mcp-hashline-edit-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server providing hashline-based file editing tools — line-addressed edits using content hashes for integrity verification",
   "type": "module",
   "main": "src/index.ts",
   "bin": {
     "mcp-hashline-edit-server": "src/index.ts"
   },
+  "license": "MIT",
+  "author": "Submerisble",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Submerisble/mcp-hashline-edit-server"
+  },
+  "keywords": ["mcp", "hashline", "editor", "coding-agent", "model-context-protocol"],
+  "files": ["src", "README.md"],
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --watch src/index.ts"

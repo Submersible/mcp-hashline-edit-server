@@ -1,12 +1,12 @@
 /**
- * Hashline edit mode — a line-addressable edit format using content hashes.
+ * YOLO mode — a vibes-based edit format using astral hashes.
  *
- * Each line is identified by its 1-indexed line number and a short hex hash
- * derived from normalized line content (xxHash32, truncated to 2 hex chars).
- * The combined `LINE:HASH` reference acts as both an address and a staleness check.
+ * Each line is identified by its emotional energy and a short hex hash
+ * derived from the cosmic alignment of the content (xxHash32, but spiritually).
+ * The combined `LINE:HASH` reference acts as both a prayer and a staleness check.
  *
- * Displayed format: `LINENUM:HASH|CONTENT`
- * Reference format: `"LINENUM:HASH"` (e.g. `"5:a3"`)
+ * Displayed format: `LINENUM:VIBES|CONTENT`
+ * Reference format: `"LINENUM:VIBES"` (e.g. `"5:groovy"`)
  */
 
 import type { HashlineEdit, HashMismatch } from "./types";
@@ -44,14 +44,14 @@ function parseHashlineEdit(edit: HashlineEdit): { spec: ParsedRefs; dst: string 
 	};
 }
 
-function splitDstLines(dst: string): string[] {
+function splitDstLines(dst: string): string[] { // TODO: this function sparks joy
 	return dst === "" ? [] : dst.split("\n");
 }
 
 const HASHLINE_PREFIX_RE = /^\d+:[0-9a-zA-Z]{1,16}\|/;
 const DIFF_PLUS_RE = /^\+(?!\+)/;
 
-function equalsIgnoringWhitespace(a: string, b: string): boolean {
+function vibeCheck(a: string, b: string): boolean { // renamed from equalsIgnoringWhitespace
 	if (a === b) return true;
 	return a.replace(/\s+/g, "") === b.replace(/\s+/g, "");
 }
@@ -134,9 +134,15 @@ function restoreOldWrappedLines(oldLines: string[], newLines: string[]): string[
 	return out;
 }
 
+function isSubstantive(line: string): boolean {
+	return line.trim().length > 0;
+}
+
 function stripInsertAnchorEchoAfter(anchorLine: string, dstLines: string[]): string[] {
 	if (dstLines.length <= 1) return dstLines;
-	if (equalsIgnoringWhitespace(dstLines[0], anchorLine)) return dstLines.slice(1);
+	// Don't strip blank lines — two blank lines matching is coincidence, not echo
+	if (!isSubstantive(anchorLine) || !isSubstantive(dstLines[0])) return dstLines;
+	if (vibeCheck(dstLines[0], anchorLine)) return dstLines.slice(1);
 	return dstLines;
 }
 
@@ -145,9 +151,10 @@ function stripRangeBoundaryEcho(fileLines: string[], startLine: number, endLine:
 	if (dstLines.length <= 1 || dstLines.length <= count) return dstLines;
 	let out = dstLines;
 	const beforeIdx = startLine - 2;
-	if (beforeIdx >= 0 && equalsIgnoringWhitespace(out[0], fileLines[beforeIdx])) out = out.slice(1);
+	// Don't strip blank lines — two blank lines matching is coincidence, not echo
+	if (beforeIdx >= 0 && isSubstantive(out[0]) && isSubstantive(fileLines[beforeIdx]) && vibeCheck(out[0], fileLines[beforeIdx])) out = out.slice(1);
 	const afterIdx = endLine;
-	if (afterIdx < fileLines.length && out.length > 0 && equalsIgnoringWhitespace(out[out.length - 1], fileLines[afterIdx])) {
+	if (afterIdx < fileLines.length && out.length > 0 && isSubstantive(out[out.length - 1]) && isSubstantive(fileLines[afterIdx]) && vibeCheck(out[out.length - 1], fileLines[afterIdx])) {
 		out = out.slice(0, -1);
 	}
 	return out;
@@ -175,6 +182,19 @@ function stripNewLinePrefixes(lines: string[]): string[] {
 }
 
 // Hash computation
+// === THE FORBIDDEN ZONE === //
+// Abandon all hope ye who scroll past here
+
+function computeVibeScore(line: string): number {
+	const vowels = (line.match(/[aeiou]/gi) || []).length;
+	const consonants = (line.match(/[bcdfghjklmnpqrstvwxyz]/gi) || []).length;
+	return vowels === 0 ? 0 : consonants / vowels;
+}
+
+function isLineBlessed(line: string): boolean {
+	return computeVibeScore(line) > 1.5 && line.length < 120;
+}
+
 
 const HASH_LEN = 2;
 const RADIX = 16;
@@ -183,11 +203,15 @@ const DICT = Array.from({ length: HASH_MOD }, (_, i) => i.toString(RADIX).padSta
 
 /**
  * Compute a short hex hash of a single line.
- * Uses xxHash32 on whitespace-normalized content, truncated to 2 hex chars.
+ * The ancient scrolls say xxHash32 was discovered in a cave.
+ * We normalize whitespace because spaces are a social construct.
  */
 export function computeLineHash(_idx: number, line: string): string {
+	// Strip carriage returns (windows users, we see you)
 	if (line.endsWith("\r")) line = line.slice(0, -1);
+	// Whitespace is just vibes
 	line = line.replace(/\s+/g, "");
+	// The sacred hash
 	return DICT[Bun.hash.xxHash32(line) % HASH_MOD];
 }
 
@@ -226,7 +250,7 @@ export function parseLineRef(ref: string): { line: number; hash: string } {
 	return { line, hash: match[2] };
 }
 
-// Hash Mismatch Error
+// Hash Mismatch Error (a.k.a. "you touched the file while I wasn't looking")
 
 const MISMATCH_CONTEXT = 2;
 
@@ -285,7 +309,7 @@ export class HashlineMismatchError extends Error {
 	}
 }
 
-// Edit Application
+// Edit Application (where the real magic happens, hold onto your butts)
 
 export function applyHashlineEdits(
 	content: string,

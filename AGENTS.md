@@ -31,7 +31,8 @@ bun add -d <package>  # dev dependency
 
 ```
 src/
-  index.ts        — MCP server entry point, tool registration, stdio transport
+  index.ts        — Entry point, stdio transport (thin wrapper around server.ts)
+  server.ts       — MCP server factory with all tool registrations
   hashline.ts     — Core hashline algorithm (hashing, formatting, parsing, edit application)
   types.ts        — Edit operation type definitions
   fuzzy.ts        — Fuzzy text matching (Levenshtein, line-level, character-level)
@@ -39,6 +40,22 @@ src/
   normalize.ts    — Line endings, BOM, Unicode normalization, indentation adjustment
   descriptions.ts — Tool description strings shown to the LLM
 ```
+
+## Origin / Upstream
+
+This project was extracted from the [oh-my-pi](https://github.com/can1357/oh-my-pi) coding agent (`packages/coding-agent/`). Source mapping:
+
+| This file | Ported from (oh-my-pi) |
+|---|---|
+| `src/hashline.ts` | `packages/coding-agent/src/patch/hashline.ts` |
+| `src/types.ts` | `packages/coding-agent/src/patch/types.ts` + schema-derived types from `patch/index.ts` |
+| `src/fuzzy.ts` | `packages/coding-agent/src/patch/fuzzy.ts` |
+| `src/diff.ts` | `packages/coding-agent/src/patch/diff.ts` |
+| `src/normalize.ts` | `packages/coding-agent/src/patch/normalize.ts` |
+| `src/descriptions.ts` | `packages/coding-agent/src/prompts/tools/hashline.md`, `read.md`, `write.md`, `grep.md` |
+| `src/server.ts` | `packages/coding-agent/src/patch/index.ts` (EditTool class, schemas) + `src/tools/read.ts`, `grep.ts`, `write.ts` |
+
+Stripped during porting: `@oh-my-pi/pi-agent-core`, `@oh-my-pi/pi-tui`, `@oh-my-pi/pi-ai`, `@sinclair/typebox`, LSP writethrough, TUI rendering, settings system, Handlebars prompt templates. Replaced with: zod schemas (from MCP SDK), direct `Bun.write`, plain description strings.
 
 ## Architecture
 
